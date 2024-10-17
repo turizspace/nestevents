@@ -27,10 +27,10 @@
     });
   }
 
-  // Function to clear the search and reset filtered events
+  // Function to clear the search and reset filtered events to empty
   function clearSearch() {
-    searchQuery = '';
-    filteredEvents = get(eventsStore); // Reset to show all events
+    searchQuery = '';  // Clear the search query
+    filteredEvents = []; // Set filteredEvents to an empty array (no events)
   }
 
   // Extract event details including handling potential undefined fields
