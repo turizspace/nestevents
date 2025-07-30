@@ -206,37 +206,126 @@ function extractImageUrls(tags) {
 
 </script>
 
-<div class="event-container">
-  {#each eventsKind1 as event (event.id)}
-    {#if profiles[event.pubkey]}
-      <div class="content-card">
-        <div class="profile-card">
-          <img src={profiles[event.pubkey].picture || 'https://via.placeholder.com/80'} alt="Profile Picture" class="profile-img">
-          <div>
-            <h3>{profiles[event.pubkey].name || 'Unknown'}</h3>
-          </div>
-        </div>
+<div class="page-container">
+  <div class="header-section">
+    <h1>My Events</h1>
+    <p class="subtitle">Manage and track your created events</p>
+  </div>
 
-        <!-- Event Details -->
-        <div class="event-details">
-          <h4>{extractEventDetails(event.tags).title || extractEventDetails(event.tags).name}</h4>
-          <p>{event.content || 'No description available'}</p>
-          <p><strong>Location:</strong> {extractEventDetails(event.tags).location}</p>
-          <p><strong>Address:</strong> {extractEventDetails(event.tags).address}</p>
-          <p><strong>Start:</strong> {extractEventDetails(event.tags).start.toLocaleString()}</p>
-          <p><strong>End:</strong> {extractEventDetails(event.tags).end.toLocaleString()}</p>
-        </div>
-
-        <!-- Image Gallery -->
-        <div class="image-gallery">
-          {#each extractImageUrls(event.tags) as imageUrl}
-            <img src={imageUrl} alt="Image from event" class="event-image">
-          {/each}
-        </div>
-
+  <div class="event-container">
+    {#if isLoading}
+      <div class="loading-state">
+        <Icon icon="mdi:loading" class="spin" width="24" height="24" />
+        <p>Loading your events...</p>
       </div>
+    {:else if eventsKind1.length === 0}
+      <div class="empty-state">
+        <Icon icon="mdi:calendar-blank" width="48" height="48" />
+        <h3>No Events Yet</h3>
+        <p>You haven't created any events yet. Start by creating your first event!</p>
+        <a href="/create" class="create-button">
+          <Icon icon="mdi:plus" />
+          Create Event
+        </a>
+      </div>
+    {:else}
+      {#each eventsKind1 as event (event.id)}
+        {#if profiles[event.pubkey]}
+          <div class="content-card">
+            <!-- Event Header -->
+            <div class="event-header">
+              <h2>{extractEventDetails(event.tags).title || extractEventDetails(event.tags).name}</h2>
+              <div class="event-status">
+                {#if new Date(extractEventDetails(event.tags).start) > new Date()}
+                  <span class="status upcoming">Upcoming</span>
+                {:else if new Date(extractEventDetails(event.tags).end) < new Date()}
+                  <span class="status ended">Ended</span>
+                {:else}
+                  <span class="status ongoing">Ongoing</span>
+                {/if}
+              </div>
+            </div>
+
+            <!-- Event Details -->
+            <div class="event-details">
+              <div class="detail-group">
+                <div class="detail-item">
+                  <Icon icon="mdi:clock-outline" />
+                  <div class="detail-text">
+                    <p class="label">Start</p>
+                    <p class="value">{new Date(extractEventDetails(event.tags).start).toLocaleDateString('en-US', { 
+                      weekday: 'short', 
+                      month: 'short', 
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}</p>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <Icon icon="mdi:clock-check-outline" />
+                  <div class="detail-text">
+                    <p class="label">End</p>
+                    <p class="value">{new Date(extractEventDetails(event.tags).end).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="detail-group">
+                <div class="detail-item">
+                  <Icon icon="mdi:map-marker" />
+                  <div class="detail-text">
+                    <p class="label">Location</p>
+                    <p class="value">{extractEventDetails(event.tags).location || 'Location not specified'}</p>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <Icon icon="mdi:map" />
+                  <div class="detail-text">
+                    <p class="label">Address</p>
+                    <p class="value">{extractEventDetails(event.tags).address || 'Address not specified'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="description">
+                <p>{event.content || 'No description available'}</p>
+              </div>
+            </div>
+
+            <!-- Image Gallery -->
+            {#if extractImageUrls(event.tags).length > 0}
+              <div class="image-gallery">
+                {#each extractImageUrls(event.tags) as imageUrl}
+                  <div class="image-wrapper">
+                    <img src={imageUrl} alt="Event" loading="lazy">
+                  </div>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Action Buttons -->
+            <div class="event-actions">
+              <button class="action-button edit">
+                <Icon icon="mdi:pencil" />
+                Edit Event
+              </button>
+              <button class="action-button share">
+                <Icon icon="mdi:share-variant" />
+                Share
+              </button>
+            </div>
+          </div>
+        {/if}
+      {/each}
     {/if}
-  {/each}
+  </div>
 </div>
 
 {#if showModal}
@@ -266,39 +355,90 @@ a {
   color: inherit;
 }
 
-/* Container for events */
-.event-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 60em;
+/* Page Layout */
+.page-container {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-  word-wrap: break-word; /* Prevent text overflow */
+  padding: 2rem;
 }
 
-@media (max-width: 768px) {
-  .event-container {
-    max-width: 100%;
-    padding: 10px;
-  }
+.header-section {
+  text-align: center;
+  margin-bottom: 3rem;
 }
 
-/* Card for individual events */
-.content-card {
-  background-color: #E7E7EF;
+.header-section h1 {
+  font-size: 2.5rem;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.header-section .subtitle {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Loading and Empty States */
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  transition: transform 0.3s ease-in-out;
-  word-wrap: break-word; /* Prevent text overflow */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.loading-state .spin {
+  animation: spin 1s linear infinite;
+}
+
+.empty-state {
+  color: #666;
+}
+
+.empty-state h3 {
+  margin: 1rem 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.empty-state .create-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #4F46E5;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  transition: background-color 0.2s;
+}
+
+.empty-state .create-button:hover {
+  background: #4338CA;
+}
+
+/* Event Container and Cards */
+.event-container {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 600px), 1fr));
+}
+
+.content-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05),
+              0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .content-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07),
+              0 12px 20px -3px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
@@ -344,50 +484,167 @@ a {
   }
 }
 
-/* Event details */
-.event-details h4 {
+/* Event Header */
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.event-header h2 {
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.3;
 }
 
-.event-details p {
-  font-size: 1.1rem;
-  color: #555;
+.event-status {
+  flex-shrink: 0;
+  margin-left: 1rem;
 }
 
-.event-details strong {
-  color: #000;
+.status {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-@media (max-width: 768px) {
-  .event-details h4 {
-    font-size: 1.3rem;
-  }
-
-  .event-details p {
-    font-size: 1rem;
-  }
+.status.upcoming {
+  background: #ECFDF5;
+  color: #047857;
 }
 
-/* Image gallery */
+.status.ongoing {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.status.ended {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+/* Event Details */
+.event-details {
+  color: #4B5563;
+}
+
+.detail-group {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.detail-item :global(svg) {
+  flex-shrink: 0;
+  color: #6B7280;
+  margin-top: 0.25rem;
+}
+
+.detail-text {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.detail-text .label {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin: 0;
+}
+
+.detail-text .value {
+  font-size: 1rem;
+  color: #1F2937;
+  margin: 0.25rem 0 0 0;
+}
+
+.description {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E5E7EB;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #4B5563;
+}
+
+/* Image Gallery */
 .image-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
 }
 
-.image-gallery img {
-  width: 100%;
-  height: 200px;
+.image-wrapper {
+  position: relative;
+  padding-top: 75%;
   border-radius: 8px;
-  object-fit: cover;
-  transition: transform 0.3s ease-in-out;
+  overflow: hidden;
+  background: #F3F4F6;
 }
 
-.image-gallery img:hover {
+.image-wrapper img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.image-wrapper:hover img {
   transform: scale(1.05);
+}
+
+/* Action Buttons */
+.event-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.action-button.edit {
+  background: #4F46E5;
+  color: white;
+}
+
+.action-button.edit:hover {
+  background: #4338CA;
+}
+
+.action-button.share {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.action-button.share:hover {
+  background: #E5E7EB;
 }
 
 /* Zap Button */
@@ -459,37 +716,137 @@ a {
 }
 
 /* Responsive Design - Adjustments for small screens */
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .page-container {
+    padding: 1.5rem;
+  }
+
+  .header-section h1 {
+    font-size: 2rem;
+  }
+}
+
 @media (max-width: 768px) {
-  .event-container {
-    max-width: 100%;
-    padding: 15px;
+  .page-container {
+    padding: 1rem;
+  }
+
+  .header-section {
+    margin-bottom: 2rem;
+  }
+
+  .header-section h1 {
+    font-size: 1.75rem;
   }
 
   .content-card {
-    padding: 15px;
+    padding: 1.25rem;
   }
 
-  .zap-button {
+  .event-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .event-status {
+    margin-left: 0;
+  }
+
+  .detail-group {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .event-actions {
+    flex-direction: column;
+  }
+
+  .action-button {
     width: 100%;
-  }
-
-  .modal-content {
-    width: 80%;
+    justify-content: center;
   }
 
   .image-gallery {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
 
-.content-card pre {
-  white-space: pre-wrap;
-  word-break: break-word;
+@media (max-width: 480px) {
+  .header-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .content-card {
+    padding: 1rem;
+  }
+
+  .image-gallery {
+    grid-template-columns: 1fr;
+  }
 }
 
-.close {
-  cursor: pointer;
-  font-size: 20px;
-  color: #333;
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  .content-card,
+  .image-wrapper img,
+  .action-button {
+    transition: none;
+  }
+
+  .content-card:hover {
+    transform: none;
+  }
+
+  .image-wrapper:hover img {
+    transform: none;
+  }
+
+  .loading-state .spin {
+    animation: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .page-container {
+    padding: 0;
+  }
+
+  .content-card {
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .action-button {
+    display: none;
+  }
 }
 </style>
