@@ -385,7 +385,7 @@ function extractEventDetails(tags) {
 
           <!-- Interactive Elements -->
           <div class="interactive-elements">
-            <RSVP {event} />
+            <RSVP {event} ndkInstance={ndk} />
             {#if profiles[event.pubkey]?.lud16}
               <button
                 class="zap-button"

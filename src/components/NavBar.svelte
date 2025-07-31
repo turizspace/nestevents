@@ -3,6 +3,7 @@
   import NDK, { NDKNip07Signer } from "@nostr-dev-kit/ndk";
   import Icon from '@iconify/svelte';
   import { userStore, userActions } from '../utils/store';
+  import Search from '../components/Search.svelte'
 
   let menuOpen = false;
   let profileDropdownOpen = false;
@@ -118,6 +119,8 @@
       <li><a href="/create" on:click={closeMenu}>Create Event</a></li>
     </ul>
   </div>
+
+  <Search />
 
   <!-- Profile Section -->
   <div class="profile-section">

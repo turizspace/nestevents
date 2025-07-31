@@ -108,7 +108,7 @@
   .search-bar {
     display: flex;
     gap: 10px;
-    margin: 2em;
+    margin: 0.5em;
   }
 
   .search-bar input {

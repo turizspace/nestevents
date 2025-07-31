@@ -1,12 +1,8 @@
 <script>
 import EventList from '../components/EventList.svelte';
-import Search from '../components/Search.svelte';
 </script>
 
 <div class="page-container">
-    <div class="search-container">
-        <Search />
-    </div>
     <EventList />
 </div>
 
