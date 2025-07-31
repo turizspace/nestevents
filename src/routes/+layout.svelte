@@ -1,7 +1,12 @@
 <script>
+  import { onMount } from 'svelte';
   import NavBar from '../components/NavBar.svelte';
+  import { initializeNDK } from '$lib/stores/ndkStore';
+  import '../assets/styles.css';
 
-    import '../assets/styles.css';
+  onMount(async () => {
+    await initializeNDK();
+  });
 </script>
 
 <!-- Include the NavBar at the top -->

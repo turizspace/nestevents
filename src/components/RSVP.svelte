@@ -143,11 +143,158 @@
   }
 </script>
 
+{#if error}
+  <div class="error-message">
+    <Icon icon="mdi:alert-circle" />
+    {error}
+  </div>
+{:else if !isReady}
+  <div class="rsvp-status">
+    <Icon icon="mdi:loading" class="animate-spin" />
+    Connecting to Nostr...
+  </div>
+{:else if rsvpState}
+  <div class="rsvp-status">
+    {#if rsvpState === 'accepted'}
+      <Icon icon="mdi:check-circle" class="text-green-500" />
+      You're going!
+    {:else if rsvpState === 'tentative'}
+      <Icon icon="mdi:help-circle" class="text-yellow-500" />
+      You might attend
+    {:else}
+      <Icon icon="mdi:close-circle" class="text-red-500" />
+      You declined
+    {/if}
+  </div>
+{:else}
+  <div class="rsvp-container">
+    <div class="rsvp-buttons">
+      <button 
+        class="rsvp-button accept" 
+        on:click={() => handleRSVP('accepted')}
+      >
+        <Icon icon="mdi:check" />
+        Going
+      </button>
+      <button 
+        class="rsvp-button maybe" 
+        on:click={() => handleRSVP('tentative')}
+      >
+        <Icon icon="mdi:help" />
+        Maybe
+      </button>
+      <button 
+        class="rsvp-button decline" 
+        on:click={() => handleRSVP('declined')}
+      >
+        <Icon icon="mdi:close" />
+        Can't Go
+      </button>
+    </div>
+
+    <textarea
+      class="note-input"
+      bind:value={note}
+      placeholder="Add a note (optional)"
+    />
+
+    {#if rsvpState !== 'declined'}
+      <label class="busy-status">
+        <input type="checkbox" bind:checked={isFree} />
+        <Icon icon="mdi:calendar-clock" />
+        I'm {isFree ? 'free' : 'busy'} during this time
+      </label>
+    {/if}
+  </div>
+{/if}
+
 <style>
   .rsvp-container {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-top: 1rem;
+  }
+
+  .rsvp-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .rsvp-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .rsvp-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .rsvp-button.accept {
+    background: #10B981;
+    color: white;
+  }
+
+  .rsvp-button.maybe {
+    background: #F59E0B;
+    color: white;
+  }
+
+  .rsvp-button.decline {
+    background: #EF4444;
+    color: white;
+  }
+
+  .rsvp-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: #E5E7EB;
+    color: #374151;
+  }
+
+  .error-message {
+    color: #EF4444;
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 0.5rem;
+    background: #FEE2E2;
+    border-radius: 6px;
+  }
+
+  .note-input {
+    padding: 0.75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    resize: vertical;
+    min-height: 80px;
+    margin-top: 0.5rem;
+  }
+
+  .busy-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
     padding: 1rem;
     background-color: #f5f5f5;
     border-radius: 8px;
@@ -250,9 +397,7 @@
     color: #666;
   }
 
-  .loading .spin {
-    animation: spin 1s linear infinite;
-  }
+ 
 
   .error-message {
     display: flex;
@@ -294,11 +439,7 @@
     }
   }
 
-  /* Enhanced button styles */
-  .rsvp-button svg {
-    width: 20px;
-    height: 20px;
-  }
+ 
 
   .rsvp-yes {
     background-color: #4caf50;
@@ -337,74 +478,3 @@
   }
 </style>
 
-<div class="rsvp-container">
-  {#if error}
-    <div class="error-message">
-      <Icon icon="mdi:alert-circle" />
-      <span>{error}</span>
-    </div>
-  {:else}
-    <div class="rsvp-buttons">
-      {#if !isReady}
-        <div class="loading">
-          <Icon icon="mdi:loading" class="spin"/>
-          <span>Initializing...</span>
-        </div>
-      {:else}
-        <button 
-          class="rsvp-button rsvp-yes" 
-          on:click={() => handleRSVP('accepted')}
-          disabled={!isReady}
-        >
-          <Icon icon="mdi:check-circle" />
-          <span>Accept</span>
-        </button>
-        <button 
-          class="rsvp-button rsvp-no" 
-          on:click={() => handleRSVP('declined')}
-          disabled={!isReady}
-        >
-          <Icon icon="mdi:close-circle" />
-          <span>Decline</span>
-        </button>
-        <button 
-          class="rsvp-button rsvp-maybe" 
-          on:click={() => handleRSVP('tentative')}
-          disabled={!isReady}
-        >
-          <Icon icon="mdi:help-circle" />
-          <span>Maybe</span>
-        </button>
-      {/if}
-    </div>
-  {/if}
-
-  {#if rsvpState !== null && rsvpState !== 'declined'}
-    <div class="availability-toggle">
-      <label>
-        <input type="checkbox" bind:checked={isFree}>
-        Mark as {isFree ? 'Free' : 'Busy'}
-      </label>
-    </div>
-  {/if}
-
-  <div class="note-section">
-    <textarea
-      bind:value={note}
-      placeholder="Add a note to your RSVP (optional)"
-      rows="3"
-    ></textarea>
-  </div>
-
-  {#if rsvpState !== null}
-    <div class="rsvp-confirmation">
-      <p class="status">Status: {rsvpState}</p>
-      {#if rsvpState !== 'declined'}
-        <p class="availability">Availability: {isFree ? 'Free' : 'Busy'}</p>
-      {/if}
-      {#if note}
-        <p class="note">Note: {note}</p>
-      {/if}
-    </div>
-  {/if}
-</div>

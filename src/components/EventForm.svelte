@@ -138,12 +138,7 @@
 
 
 <style>
-  /* Base styles */
-  body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f4f7fa;
-    color: #333;
-  }
+  
 
   form {
     max-width: 600px;
@@ -204,41 +199,9 @@
     gap: 1rem;
   }
 
-  /* Geolocation and Location fields */
-  .readonly-input {
-    background-color: #f4f7fa;
-    cursor: not-allowed;
-  }
+  
 
-  /* GetLocation component styling */
-  .location-btn {
-    background-color: #f7d74e;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 0.5rem;
-  }
-
-  .location-btn:hover {
-    background-color: #f5c141;
-  }
-
-  /* Event Log styling */
-  .event-log {
-    background-color: #fff;
-    padding: 1rem;
-    border-radius: 6px;
-    margin-top: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .event-log pre {
-    font-family: 'Courier New', monospace;
-    color: #555;
-    font-size: 1rem;
-  }
+ 
 
   /* Mobile responsiveness */
   @media (max-width: 768px) {
@@ -247,8 +210,5 @@
       width: 100%;
     }
 
-    .location-btn {
-      width: 100%;
-    }
   }
 </style>

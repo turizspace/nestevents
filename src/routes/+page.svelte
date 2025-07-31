@@ -10,14 +10,8 @@ import EventList from '../components/EventList.svelte';
     .page-container {
         padding-top: 80px;
         width: 100%;
-        max-width: 1200px;
+        max-width: 1400px;
         margin: 0 auto;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-
-    .search-container {
-        margin-bottom: 2rem;
     }
 
     @media (max-width: 768px) {

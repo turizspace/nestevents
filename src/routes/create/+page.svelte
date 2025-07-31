@@ -249,9 +249,6 @@
     min-height: 100px; /* Ensure consistent height when loading */
   }
 
-  .spin {
-    animation: spin 1s linear infinite;
-  }
 
   @keyframes spin {
     from {

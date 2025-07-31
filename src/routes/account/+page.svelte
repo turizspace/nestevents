@@ -113,14 +113,6 @@
     line-height: 1.6;
   }
 
-  .profile-card a {
-    color: #007bff;
-    text-decoration: none;
-  }
-
-  .profile-card a:hover {
-    text-decoration: underline;
-  }
 
   .edit-button, .save-button, .cancel-button {
     display: flex;
@@ -215,7 +207,7 @@
     <div class="profile-card">
       {#if !editMode}
         <!-- View Mode -->
-        <img src={userProfile?.picture || 'https://via.placeholder.com/100'} alt="Profile Picture">
+        <img src={userProfile?.picture || 'https://via.placeholder.com/100'} alt="" aria-hidden="true">
         <h3>{userProfile?.name || 'Anonymous'}</h3>
         {#if userProfile?.about}
           <p>{userProfile.about}</p>

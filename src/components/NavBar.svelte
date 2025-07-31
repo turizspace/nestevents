@@ -3,7 +3,7 @@
   import NDK, { NDKNip07Signer } from "@nostr-dev-kit/ndk";
   import Icon from '@iconify/svelte';
   import { userStore, userActions } from '../utils/store';
-  import Search from '../components/Search.svelte'
+  import Search from '../components/Search.svelte';
 
   let menuOpen = false;
   let profileDropdownOpen = false;
@@ -32,6 +32,16 @@
   function toggleProfileDropdown(event) {
     event.stopPropagation();
     profileDropdownOpen = !profileDropdownOpen;
+  }
+
+  // Handle keyboard navigation for profile dropdown
+  function handleProfileKeydown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleProfileDropdown(e);
+    } else if (e.key === 'Escape' && profileDropdownOpen) {
+      profileDropdownOpen = false;
+    }
   }
 
   // Close dropdown when clicking outside
@@ -105,69 +115,109 @@
 </script>
 
 <nav>
-  <div class="nav-container">
+  <div class="nav-left">
     <!-- Hamburger Menu for Mobile -->
-    <div class="hamburger" class:active={menuOpen} on:click={toggleMenu}>
+    <button 
+      class="hamburger" 
+      class:active={menuOpen} 
+      on:click={toggleMenu}
+      aria-label="Toggle menu"
+      aria-expanded={menuOpen}
+    >
       <div></div>
       <div></div>
       <div></div>
-    </div>
+    </button>
 
     <!-- Navigation links -->
     <ul class:active={menuOpen}>
-      <li><a href="/" on:click={closeMenu}>Home</a></li>
-      <li><a href="/create" on:click={closeMenu}>Create Event</a></li>
+      <li>
+        <a href="/" on:click={closeMenu}>
+          <Icon icon="mdi:home" width="20" height="20" />
+          <span>Home</span>
+        </a>
+      </li>
+      <li>
+        <a href="/create" on:click={closeMenu}>
+          <Icon icon="mdi:calendar-plus" width="20" height="20" />
+          <span>Create Event</span>
+        </a>
+      </li>
     </ul>
   </div>
 
-  <Search />
+  <div class="nav-center">
+    <Search />
+  </div>
 
   <!-- Profile Section -->
-  <div class="profile-section">
+  <div class="nav-right">
     {#if $userStore.loading}
       <div class="loading-indicator"></div>
     {:else if isAuthenticated}
-      <div 
+      <button 
         class="profile-trigger" 
         on:click={toggleProfileDropdown}
+        on:keydown={handleProfileKeydown}
+        aria-expanded={profileDropdownOpen}
+        aria-label="Toggle profile menu"
       >
-        <a 
-          href="/account" 
-          on:click|stopPropagation={closeMenu}
-          class="profile-picture-link"
-        >
-          <img
-            src={userProfile?.picture || 'https://via.placeholder.com/40'}
-            alt="Profile"
-            class="profile-picture"
-          />
-        </a>
-        <span class="profile-name">{userProfile?.name || 'Anonymous'}</span>
-        <Icon 
-          icon={profileDropdownOpen ? "mdi:chevron-up" : "mdi:chevron-down"} 
-          class="dropdown-icon"
-        />
-      </div>
+        <div class="profile-info">
+          {#if userProfile?.picture}
+            <img src={userProfile.picture} alt="" class="profile-pic" />
+          {:else}
+            <div class="profile-placeholder" aria-hidden="true">
+              <Icon icon="mdi:account" />
+            </div>
+          {/if}
+          <span class="profile-name">{userProfile?.name || 'Anonymous'}</span>
+          <Icon icon="mdi:chevron-down" class="dropdown-icon" aria-hidden="true" />
+        </div>
+      </button>
       
       {#if profileDropdownOpen}
-        <div class="profile-dropdown" on:click|stopPropagation>
-          <a href="/account" class="dropdown-item" on:click={closeMenu}>
-            <Icon icon="mdi:account" />
+        <div 
+          class="profile-dropdown" 
+          on:click|stopPropagation
+          role="menu"
+          aria-label="Profile menu"
+        >
+          <a 
+            href="/account" 
+            class="dropdown-item" 
+            on:click={closeMenu}
+            role="menuitem"
+          >
+            <Icon icon="mdi:account" aria-hidden="true" />
             <span>Profile</span>
           </a>
-          <a href="/myEvents" class="dropdown-item" on:click={closeMenu}>
-            <Icon icon="mdi:calendar-star" />
+          <a 
+            href="/myEvents" 
+            class="dropdown-item" 
+            on:click={closeMenu}
+            role="menuitem"
+          >
+            <Icon icon="mdi:calendar-star" aria-hidden="true" />
             <span>My Events</span>
           </a>
-          <a href="/notifs" class="dropdown-item" on:click={closeMenu}>
-            <Icon icon="mdi:bell" />
+          <a 
+            href="/notifs" 
+            class="dropdown-item" 
+            on:click={closeMenu}
+            role="menuitem"
+          >
+            <Icon icon="mdi:bell" aria-hidden="true" />
             <span>Notifications</span>
           </a>
         </div>
       {/if}
     {:else}
-      <button class="login-button" on:click={() => initializeNostr()}>
-        <Icon icon="mdi:login" />
+      <button 
+        class="login-button" 
+        on:click={() => initializeNostr()}
+        aria-label="Login with Nostr"
+      >
+        <Icon icon="mdi:login" aria-hidden="true" />
         <span>Login</span>
       </button>
     {/if}
@@ -180,16 +230,17 @@
   nav {
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
-    padding: 0 max(2rem, 5vw);
+    padding: 0 max(1.5rem, 4vw);
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(220px, 300px) minmax(400px, 1fr) minmax(120px, 200px);
     align-items: center;
+    gap: 2rem;
     height: 64px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
@@ -198,12 +249,27 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
-  .nav-container {
+  .nav-left {
     display: flex;
     align-items: center;
-    gap: clamp(1.5rem, 3vw, 2.5rem);
-    height: 100%;
+    gap: 1.5rem;
+    padding-left: 0.5rem;
+    min-width: 0;
   }
+
+  .nav-center {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .nav-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 0.5rem;
+  }
+
 
   .hamburger {
     display: none;
@@ -214,6 +280,16 @@
     border-radius: 8px;
     transition: background-color 0.2s ease;
     margin: -12px 0;
+  }
+
+  @media (max-width: 900px) {
+    .hamburger {
+      display: flex;
+    }
+    
+    ul {
+      display: none;
+    }
   }
 
   .hamburger:hover {
@@ -234,92 +310,70 @@
     padding: 0;
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
-  a {
+  ul a {
     text-decoration: none;
     color: #333;
     font-weight: 500;
-    transition: color 0.3s ease;
-  }
-
-  a:hover {
-    color: #2196f3;
-  }
-
-  /* Profile Section Styles */
-  .profile-section {
-    position: relative;
-    margin-left: auto;
-    height: 100%;
+    transition: all 0.2s ease;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    white-space: nowrap;
     display: flex;
     align-items: center;
+    gap: 0.5rem;
   }
+
+  ul a:hover {
+    color: #2196f3;
+    background: rgba(33, 150, 243, 0.08);
+  }
+
+
 
   .profile-trigger {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     cursor: pointer;
-    padding: 6px;
+    padding: 4px 8px;
     border-radius: 28px;
     transition: all 0.2s ease;
     background: transparent;
-    height: 40px;
+    border: none;
   }
 
-  .profile-picture-link {
+  .profile-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .profile-pic {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .profile-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f0f0f0;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
-    position: relative;
-    padding: 2px;
-  }
-
-  .profile-picture-link::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    transition: all 0.2s ease;
-    background: linear-gradient(to right, #2196f3, #21d4fd);
-    opacity: 0;
-    transform: scale(1.1);
-  }
-
-  .profile-picture-link:hover::after {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-
-  .profile-picture {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #fff;
-    position: relative;
-    z-index: 1;
-    background: #fff;
-    transition: transform 0.2s ease;
-  }
-
-  .profile-picture-link:hover .profile-picture {
-    transform: scale(0.95);
+    color: #666;
   }
 
   .profile-name {
     font-weight: 500;
   }
 
-  .dropdown-icon {
-    color: #666;
-    width: 20px;
-    height: 20px;
-  }
+ 
 
   .profile-dropdown {
     position: absolute;
@@ -389,15 +443,36 @@
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     nav {
+      grid-template-columns: minmax(180px, 250px) minmax(300px, 1fr) minmax(120px, 180px);
+      gap: 1rem;
       padding: 0 1rem;
+    }
+  }
+
+  @media (max-width: 900px) {
+    nav {
+      grid-template-columns: 48px minmax(200px, 1fr) 48px;
+      gap: 0.75rem;
       height: 56px;
     }
 
-    .nav-container {
-      position: static;
-      width: auto;
+    .nav-center {
+      padding: 0;
+      margin: 0 auto;
+      width: 100%;
+      max-width: none;
+    }
+
+    .nav-left {
+      width: 48px;
+      padding-left: 0;
+    }
+
+    .nav-right {
+      width: 48px;
+      padding-right: 0;
     }
 
     /* Hamburger Menu */
@@ -460,46 +535,38 @@
     li a {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       padding: 0.75rem 2rem;
       font-size: 1rem;
       transition: all 0.2s ease;
+      border-radius: 0;
     }
 
     li a:hover {
       background-color: rgba(33, 150, 243, 0.08);
       color: #2196f3;
-      transform: translateX(4px);
+    }
+
+    li a span {
+      margin-left: 0.5rem;
     }
 
     /* Profile Section */
-    .profile-section {
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      margin: 0;
+    .nav-right {
+      width: 40px;
+      justify-content: center;
     }
 
     .profile-trigger {
-      padding: 0;
-      height: 40px;
-    }
-
-    .profile-name, 
-    .dropdown-icon {
-      display: none;
-    }
-
-    .profile-picture {
-      width: 40px;
-      height: 40px;
+      padding: 4px;
       margin: 0;
-      border-width: 1.5px;
     }
 
-    .profile-picture-link {
-      padding: 1.5px;
+ 
+    .profile-pic,
+    .profile-placeholder {
+      width: 32px;
+      height: 32px;
     }
 
     .profile-dropdown {

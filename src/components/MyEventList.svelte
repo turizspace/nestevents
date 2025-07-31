@@ -379,18 +379,9 @@
     object-fit: cover;
   }
 
-  /* Icons */
-  .icon {
-    color: #2196f3;
-    width: 24px;
-    height: 24px;
-  }
 
-  .icon-small {
-    color: #2196f3;
-    width: 18px;
-    height: 18px;
-  }
+
+
 
   /* Loading state */
   .loading-overlay {
@@ -532,15 +523,9 @@
       border-radius: 8px;
     }
 
-    .icon {
-      width: 20px;
-      height: 20px;
-    }
+    
 
-    .icon-small {
-      width: 16px;
-      height: 16px;
-    }
+  
 
     .loading-overlay {
       padding: 24px;

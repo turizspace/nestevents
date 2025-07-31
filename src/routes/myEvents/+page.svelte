@@ -329,9 +329,20 @@ function extractImageUrls(tags) {
 </div>
 
 {#if showModal}
-  <div class="modal" on:click={closeModal}>
-    <div class="modal-content" on:click|stopPropagation>
-      <h2>Zap User</h2>
+  <div 
+    class="modal" 
+    on:click={closeModal}
+    on:keydown={e => e.key === 'Escape' && closeModal()}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+  >
+    <div 
+      class="modal-content" 
+      on:click|stopPropagation
+      role="document"
+    >
+      <h2 id="modal-title">Zap User</h2>
       <p>Send a zap to {currentLud16}</p>
       <input type="number" bind:value={customZapAmountMillisats} placeholder="Amount in millisats" />
       <input type="text" bind:value={customZapComment} placeholder="Zap comment" />
@@ -343,12 +354,6 @@ function extractImageUrls(tags) {
 
 <style>
 
-body {
-  font-family: 'Arial', sans-serif;
-  color: #333;
-  line-height: 1.5;
-  font-size: 16px;
-}
 
 a {
   text-decoration: none;
@@ -389,9 +394,6 @@ a {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.loading-state .spin {
-  animation: spin 1s linear infinite;
-}
 
 .empty-state {
   color: #666;
@@ -447,21 +449,6 @@ a {
   }
 }
 
-/* Profile card */
-.profile-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.profile-img {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
 
 .profile-card div h3 {
   font-size: 1.2rem;
@@ -647,29 +634,6 @@ a {
   background: #E5E7EB;
 }
 
-/* Zap Button */
-.zap-button {
-  background-color: #f7d74e;
-  border: none;
-  padding: 12px 24px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-  transition: background-color 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.zap-button:hover {
-  background-color: #f5c141;
-}
-
-.zap-icon {
-  margin-left: 8px;
-}
-
 /* Modal */
 .modal {
   position: fixed;
@@ -828,9 +792,6 @@ a {
     transform: none;
   }
 
-  .loading-state .spin {
-    animation: none;
-  }
 }
 
 /* Print Styles */
