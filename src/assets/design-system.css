@@ -1,0 +1,154 @@
+/* Design Tokens */
+:root {
+  /* Colors */
+  --primary: #4A4AFF;
+  --primary-light: #7A7AFF;
+  --primary-dark: #2A2AFF;
+  --secondary: #6B6B6B;
+  --background: #EDECFF;
+  --surface: #FFFFFF;
+  --error: #FF4A4A;
+  --success: #4AFF4A;
+  --warning: #FFAA4A;
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  
+  /* Typography */
+  --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 2rem;
+  --font-subheading: 1.5rem;
+  --font-body: 1rem;
+  --font-small: 0.875rem;
+  
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  
+  /* Borders */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 16px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+  
+  /* Z-index */
+  --z-modal: 1000;
+  --z-popup: 900;
+  --z-header: 800;
+  --z-tooltip: 700;
+}
+
+/* Base styles */
+body {
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background-color: var(--background);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h1 { font-size: var(--font-heading); }
+h2 { font-size: var(--font-subheading); }
+
+/* Utility classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--border-radius-md);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: white;
+}
+
+/* Forms */
+.input {
+  padding: var(--space-sm);
+  border: 1px solid var(--secondary);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-body);
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Cards */
+.card {
+  background-color: var(--surface);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-md);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-normal);
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 0%,
+    var(--background) 50%,
+    var(--surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

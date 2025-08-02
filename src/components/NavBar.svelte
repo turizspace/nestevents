@@ -1,19 +1,33 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import NDK, { NDKNip07Signer } from "@nostr-dev-kit/ndk";
   import Icon from '@iconify/svelte';
-  import { userStore, userActions } from '../utils/store';
+  import { userStore, userActions } from '../utils/store.js';
+
+  interface UserProfile {
+    name?: string;
+    picture?: string;
+    pubkey?: string;
+    [key: string]: any;
+  }
+
+  interface UserState {
+    isAuthenticated: boolean;
+    pubkey: string | null;
+    profile: UserProfile | null;
+    loading: boolean;
+  }
   import Search from '../components/Search.svelte';
 
   let menuOpen = false;
   let profileDropdownOpen = false;
-  let userProfile;
-  let ndk;
+  let userProfile: UserProfile | null = null;
+  let ndk: NDK | null = null;
   
-  let isAuthenticated;
+  let isAuthenticated = false;
 
   // Subscribe to the user store
-  userStore.subscribe(value => {
+  userStore.subscribe((value: UserState) => {
     userProfile = value.profile;
     isAuthenticated = value.isAuthenticated;
   });
@@ -29,13 +43,13 @@
   }
 
   // Toggle profile dropdown
-  function toggleProfileDropdown(event) {
+  function toggleProfileDropdown(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
     profileDropdownOpen = !profileDropdownOpen;
   }
 
   // Handle keyboard navigation for profile dropdown
-  function handleProfileKeydown(e) {
+  function handleProfileKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       toggleProfileDropdown(e);
@@ -45,7 +59,7 @@
   }
 
   // Close dropdown when clicking outside
-  function handleClickOutside(event) {
+  function handleClickOutside(event: MouseEvent) {
     if (profileDropdownOpen) {
       profileDropdownOpen = false;
     }
@@ -66,7 +80,7 @@
       await ndk.connect();
 
       // Check if we already have a user in the store
-      let currentUser;
+      let currentUser: UserState | undefined;
       userStore.subscribe(value => {
         currentUser = value;
       })();
@@ -96,8 +110,9 @@
             }
           });
 
-          sub.on('error', (error) => {
-            console.error("Profile subscription error:", error);
+          // Using NDK's close event instead of error
+          sub.on('close', () => {
+            console.error("Profile subscription closed unexpectedly");
           });
         } else {
           userActions.clearUser();
@@ -177,9 +192,11 @@
       
       {#if profileDropdownOpen}
         <div 
-          class="profile-dropdown" 
+          class="profile-dropdown"
           on:click|stopPropagation
+          on:keydown={(e) => e.key === 'Escape' && (profileDropdownOpen = false)}
           role="menu"
+          tabindex="0"
           aria-label="Profile menu"
         >
           <a 
@@ -187,6 +204,7 @@
             class="dropdown-item" 
             on:click={closeMenu}
             role="menuitem"
+            tabindex="-1"
           >
             <Icon icon="mdi:account" aria-hidden="true" />
             <span>Profile</span>
@@ -196,6 +214,7 @@
             class="dropdown-item" 
             on:click={closeMenu}
             role="menuitem"
+            tabindex="-1"
           >
             <Icon icon="mdi:calendar-star" aria-hidden="true" />
             <span>My Events</span>
@@ -205,6 +224,7 @@
             class="dropdown-item" 
             on:click={closeMenu}
             role="menuitem"
+            tabindex="-1"
           >
             <Icon icon="mdi:bell" aria-hidden="true" />
             <span>Notifications</span>
@@ -238,7 +258,7 @@
     right: 0;
     z-index: 1000;
     display: grid;
-    grid-template-columns: minmax(220px, 300px) minmax(400px, 1fr) minmax(120px, 200px);
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 2rem;
     height: 64px;
@@ -252,15 +272,19 @@
   .nav-left {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1.0rem;
     padding-left: 0.5rem;
-    min-width: 0;
+    min-width: 220px;
+    position: relative;
+    z-index: 2;
   }
 
   .nav-center {
     width: 100%;
-    max-width: 800px;
+    max-width: 600px;
     margin: 0 auto;
+    position: relative;
+    z-index: 1;
   }
 
   .nav-right {
@@ -268,6 +292,9 @@
     justify-content: flex-end;
     align-items: center;
     padding-right: 0.5rem;
+    min-width: 120px;
+    position: relative;
+    z-index: 2;
   }
 
 
@@ -279,7 +306,6 @@
     padding: 12px;
     border-radius: 8px;
     transition: background-color 0.2s ease;
-    margin: -12px 0;
   }
 
   @media (max-width: 900px) {
@@ -453,16 +479,19 @@
 
   @media (max-width: 900px) {
     nav {
-      grid-template-columns: 48px minmax(200px, 1fr) 48px;
+      grid-template-columns: 48px 1fr 48px;
       gap: 0.75rem;
       height: 56px;
+      padding: 0 0.5rem;
     }
 
     .nav-center {
       padding: 0;
       margin: 0 auto;
-      width: 100%;
+      width: calc(100% - 96px); /* Subtract the width of nav-left and nav-right */
       max-width: none;
+      position: relative;
+      z-index: 1;
     }
 
     .nav-left {

@@ -1,11 +1,32 @@
-<script>
-  import { writable } from 'svelte/store';
+<script lang="ts">
+  import { writable, type Writable } from 'svelte/store';
   import NDK, { NDKEvent, NDKNip07Signer } from "@nostr-dev-kit/ndk";
-  import { v4 as uuidv4 } from 'uuid'; // Import UUID
-
-
+  import { v4 as uuidv4 } from 'uuid';
+  import { onMount } from 'svelte';
   import GetLocation from './GetLocation.svelte';
 
+  interface ExistingEventData {
+    title: string;
+    summary: string;
+    geolocation: string;
+    location: string;
+    image: string;
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    label: string;
+    descriptiveLabel: string;
+    hashtags: string;
+    referenceLinks: string;
+  }
+
+  // Check if we're editing an existing event
+  let isEditing = false;
+  let eventId = '';
+  let existingEventData = null;
+
+  // Form fields
   let input = writable('');
   let uuid = writable('');
   let title = writable('');
@@ -17,7 +38,42 @@
   let startTime = writable('');
   let endDate = writable('');
   let endTime = writable('');
-  let eventLog = writable(null);
+  let eventLog: Writable<NDKEvent | null> = writable(null);
+
+  function populateFormFields(data: ExistingEventData) {
+    title.set(data.title || '');
+    summary.set(data.summary || '');
+    geolocation.set(data.geolocation || '');
+    location.set(data.location || '');
+    image.set(data.image || '');
+    startDate.set(data.startDate || '');
+    startTime.set(data.startTime || '');
+    endDate.set(data.endDate || '');
+    endTime.set(data.endTime || '');
+    label.set(data.label || '');
+    descriptiveLabel.set(data.descriptiveLabel || '');
+    hashtags.set(data.hashtags || '');
+    referenceLinks.set(data.referenceLinks || '');
+  }
+
+  onMount(() => {
+    // Check URL for edit parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
+    
+    if (editId) {
+      // Load event data from localStorage
+      const savedEvent = localStorage.getItem('eventToEdit');
+      if (savedEvent) {
+        existingEventData = JSON.parse(savedEvent);
+        isEditing = true;
+        eventId = editId;
+        
+        // Populate form fields
+        populateFormFields(existingEventData);
+      }
+    }
+  });
 
   let label = writable('');
   let descriptiveLabel = writable('');
@@ -26,25 +82,54 @@
 
   let nip07signer
 
-  const handleLocationUpdate = (event) => {
+  interface LocationUpdateEvent {
+    detail: {
+      geolocation: string;
+      location: string;
+    };
+  }
+
+  const handleLocationUpdate = (event: LocationUpdateEvent) => {
     const { geolocation: newGeolocation, location: newLocation } = event.detail;
     geolocation.set(newGeolocation);  // Bind geolocation value
     location.set(newLocation);        // Bind location name
   };
 
-  const getTimeZone = () => {
+  const getTimeZone = (): string => {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   };
 
-  const onSubmit = async (event) => {
+  const onSubmit = async (event: SubmitEvent) => {
     event.preventDefault();
 
-    // Example submission logic (replace with actual logic)
+    // Validate dates
+    const startDateTime = new Date(`${$startDate}T${$startTime}`);
+    const endDateTime = new Date(`${$endDate}T${$endTime}`);
+
+    if (isNaN(startDateTime.getTime())) {
+      alert('Please enter a valid start date and time');
+      return;
+    }
+
+    if (endDateTime && isNaN(endDateTime.getTime())) {
+      alert('Please enter a valid end date and time');
+      return;
+    }
+
+    if (endDateTime && endDateTime < startDateTime) {
+      alert('End date must be after start date');
+      return;
+    }
+
+    // Log form data for debugging
     console.log('Form data:', {
       title: $title,
       geolocation: $geolocation,
       location: $location,
-      // other fields...
+      startDateTime: startDateTime.toISOString(),
+      endDateTime: endDateTime.toISOString(),
+      startTimestamp: Math.floor(startDateTime.getTime() / 1000),
+      endTimestamp: Math.floor(endDateTime.getTime() / 1000)
     });
 
 
@@ -68,13 +153,19 @@
     // Get the user's time zone
     const tzid = getTimeZone();
 
+    // Convert dates to Unix timestamps (seconds since epoch)
+    
+    // Convert to seconds since epoch (NIP-52 requirement)
+    const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+    const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+
     ndkEvent.tags = [
       ["d", uuid], // Using generated UUID
       ["title", $title],
       ["summary", $summary],
       ['image', $image, "756x1008"],
-      ["start", `${$startDate}T${$startTime}`], // Combine date and time
-      ["end", `${$endDate}T${$endTime}`], // Combine date and time
+      ["start", startTimestamp.toString()], // Unix timestamp in seconds
+      ["end", endTimestamp.toString()], // Unix timestamp in seconds
       ["start_tzid", tzid],
       ["end_tzid", tzid],
       ["g", $geolocation],  // Ensure geolocation is updated
@@ -89,7 +180,7 @@
     await ndk.publish(ndkEvent);
 
     // Log the created event
-    eventLog.set(ndkEvent);
+    eventLog.set(ndkEvent as NDKEvent);
     console.log("Event published:", ndkEvent);
 
   };

@@ -1,0 +1,89 @@
+<!-- Edit Modal -->
+{#if showEditModal}
+  <dialog 
+    class="modal edit-modal"
+    open
+    on:close={closeEditModal}
+    aria-labelledby="edit-modal-title"
+  >
+    <form 
+      class="modal-content edit-form" 
+      on:submit|preventDefault={handleEditSubmit}
+    >
+      <h2 id="edit-modal-title">Edit Event</h2>
+      
+      <div class="form-group">
+        <label for="title">Title</label>
+        <input type="text" id="title" bind:value={editForm.title} required />
+      </div>
+
+      <div class="form-group">
+        <label for="content">Description</label>
+        <textarea id="content" bind:value={editForm.content} rows="4"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="summary">Summary</label>
+        <input type="text" id="summary" bind:value={editForm.summary} />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" bind:value={editForm.startDate} required />
+        </div>
+        <div class="form-group">
+          <label for="startTime">Start Time</label>
+          <input type="time" id="startTime" bind:value={editForm.startTime} required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="endDate">End Date</label>
+          <input type="date" id="endDate" bind:value={editForm.endDate} required />
+        </div>
+        <div class="form-group">
+          <label for="endTime">End Time</label>
+          <input type="time" id="endTime" bind:value={editForm.endTime} required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="location">Location</label>
+        <input type="text" id="location" bind:value={editForm.location} />
+      </div>
+
+      <div class="form-group">
+        <label for="image">Image URL</label>
+        <input type="url" id="image" bind:value={editForm.image} />
+      </div>
+
+      <div class="modal-actions">
+        <button type="submit" class="save-button">Save Changes</button>
+        <button type="button" class="cancel-button" on:click={closeEditModal}>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+{/if}
+
+<!-- Zap Modal -->
+{#if showZapModal}
+  <dialog 
+    class="modal"
+    open
+    on:close={closeModal}
+    aria-labelledby="modal-title"
+  >
+    <div class="modal-content" role="document">
+      <h2 id="modal-title">Zap User</h2>
+      <p>Send a zap to {currentLud16}</p>
+      <input type="number" bind:value={customZapAmountMillisats} placeholder="Amount in millisats" />
+      <input type="text" bind:value={customZapComment} placeholder="Zap comment" />
+      <div class="modal-actions">
+        <button on:click={handleZap} class="save-button">Send Zap</button>
+        <button on:click={closeModal} class="cancel-button">Close</button>
+      </div>
+    </div>
+  </dialog>
+{/if}

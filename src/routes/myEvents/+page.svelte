@@ -1,29 +1,60 @@
-<script>
+<script lang="ts">
 import { onMount, onDestroy } from 'svelte';
-import NDK, {NDKNip07Signer} from "@nostr-dev-kit/ndk";
+import NDK, {
+  NDKNip07Signer, 
+  NDKEvent,
+  NDKSubscription,
+  NDKKind
+} from "@nostr-dev-kit/ndk";
+import type { NDKFilter } from "@nostr-dev-kit/ndk";
 import Icon from '@iconify/svelte';
 import { getZapEndpoint, makeZapRequest } from '../../utils/zapUtils.js';
 import { eventsStore, profilesStore } from '../../utils/store.js';
+import type { EventDetails, EditFormData } from '../../lib/types/events.js';
 
 
-let eventsKind1 = [];
-let profiles = {};
+let eventsKind1: NDKEvent[] = [];
+interface Profile {
+  name?: string;
+  about?: string;
+  picture?: string;
+  lud16?: string;
+  [key: string]: any;
+}
+
+let profiles: Record<string, Profile> = {};
 let isLoading = true;
 
-let ndk;
-let subscriptionKind1;
-let subscriptionKind0;
+let ndk: NDK;
+let subscriptionKind1: NDKSubscription;
+let subscriptionKind0: NDKSubscription;
 
-let showModal = false;
+// Modal states
+let showZapModal = false;
+let showEditModal = false;
 let currentLud16 = '';
 let customZapComment = '';
 let customZapAmountMillisats = '';
 const defaultZapAmounts = [5000, 10000, 20000, 50000];
 
+// Edit modal state
+let editingEvent: NDKEvent | null = null;
+let editForm: EditFormData = {
+  title: '',
+  content: '',
+  summary: '',
+  location: '',
+  startDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
+  image: ''
+};
 
-  let nip07signer;
-  let user; // Define user in the component scope
-  let userPubKey; // Store user public key
+
+  let nip07signer: NDKNip07Signer;
+  let user: { pubkey: string }; // Define user in the component scope
+  let userPubKey: string; // Store user public key
 
 
 
@@ -49,8 +80,8 @@ const defaultZapAmounts = [5000, 10000, 20000, 50000];
         signer: nip07signer
       });
 
-      const user = await nip07signer.user(); // Make sure nip07signer is initialized
-      const userPubKey = user.pubkey; // Get the user's public key
+      user = await nip07signer.user(); // Make sure nip07signer is initialized
+      userPubKey = user.pubkey; // Get the user's public key
 
       // Connect to the relay
       await ndk.connect();
@@ -58,12 +89,12 @@ const defaultZapAmounts = [5000, 10000, 20000, 50000];
 
       // Subscribe to events of kind 31923 (events of interest)
       subscriptionKind1 = ndk.subscribe({
-        kinds: [31923],
+        kinds: [31923 as NDKKind],
         authors: [userPubKey] // Use the actual userPubKey, not a string
-      });
+      } as NDKFilter);
 
       // Handle events of kind 1
-      subscriptionKind1.on('event', (event) => {
+      subscriptionKind1.on('event', (event: NDKEvent) => {
         eventsKind1 = [...eventsKind1, event];
         eventsStore.update(events => [...events, event]);
         isLoading = false;
@@ -77,9 +108,9 @@ const defaultZapAmounts = [5000, 10000, 20000, 50000];
       });
 
       // Handle profile events (kind 0)
-      subscriptionKind0.on('event', (event) => {
+      subscriptionKind0.on('event', (event: NDKEvent) => {
         try {
-          const profile = JSON.parse(event.content);
+          const profile = JSON.parse(event.content) as Profile;
           profiles[event.pubkey] = profile;
           profilesStore.update(p => ({ ...p, [event.pubkey]: profile }));
         } catch (error) {
@@ -94,17 +125,27 @@ const defaultZapAmounts = [5000, 10000, 20000, 50000];
 
 onDestroy(() => {
   // Clean up subscriptions
-
+  try {
+    if (subscriptionKind1) {
+      subscriptionKind1.removeAllListeners();
+    }
+    if (subscriptionKind0) {
+      subscriptionKind0.removeAllListeners();
+    }
+    // NDK will handle cleanup of connections automatically
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+  }
 });
 
 // Modal handling
 function openModal(lud16) {
   currentLud16 = lud16;
-  showModal = true;
+  showZapModal = true;
 }
 
 function closeModal() {
-  showModal = false;
+  showZapModal = false;
   customZapComment = '';
   customZapAmountMillisats = '';
 }
@@ -162,46 +203,203 @@ async function handleZap() {
   closeModal();
 }
 
-// Extract image URLs from tags
-function extractImageUrls(tags) {
+  // Extract image URLs from tags
+function extractImageUrls(tags: string[][]): string[] {
   return tags
     .filter(tag => tag[0] === 'image')
     .map(tag => tag[1]);
 }
-  // Function to extract event details
-  function extractEventDetails(tags) {
-    const eventDetails = {};
-    tags.forEach(([key, value]) => {
-      switch (key) {
-        case 'title':
-          eventDetails.title = value;
-          break;
-        case 'name':
-            eventDetails.name = value;
-            break;
-        case 'description':
-          eventDetails.description = value;
-          break;
-        case 'summary':
-          eventDetails.summary = value;
-          break;
-        case 'start':
-          eventDetails.start = new Date(parseInt(value) * 1000); // Convert Unix timestamp
-          break;
-        case 'end':
-          eventDetails.end = new Date(parseInt(value) * 1000); // Convert Unix timestamp
-          break;
-        case 'location':
-          eventDetails.location = value;
-          break;
-        case 'address':
-          eventDetails.address = value;
-          break;
-        default:
-          break;
+
+  // Delete event function implementing NIP-09
+  async function deleteEvent(event: NDKEvent) {
+    if (!ndk || !nip07signer) {
+      console.error('NDK or signer not initialized');
+      alert('Cannot delete event: NDK or signer not initialized');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // Create deletion request event (NIP-09)
+      const deletionEvent = new NDKEvent(ndk);
+      deletionEvent.kind = 5; // Deletion request event kind
+      deletionEvent.tags = [
+        ['e', event.id], // Reference to event being deleted
+        ['k', '31923'], // Kind of event being deleted (31923 for calendar events)
+        ['p', event.pubkey] // Reference to the event author
+      ];
+      deletionEvent.content = 'Event deleted by author'; // Optional reason
+
+      // Sign and publish deletion event
+      await deletionEvent.sign();  // Sign the deletion event
+      await ndk.publish(deletionEvent);
+      console.log('Deletion event published:', deletionEvent);
+
+      // Remove event from local state
+      eventsKind1 = eventsKind1.filter(e => e.id !== event.id);
+      
+      // Update the global events store
+      eventsStore.update(events => events.filter(e => e.id !== event.id));
+
+      // Unsubscribe from the deleted event
+      if (subscriptionKind1) {
+        subscriptionKind1.removeFilter({ ids: [event.id] });
       }
-    });
-    return eventDetails;
+
+      alert('Event deleted successfully');
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Failed to delete event: ' + error.message);
+    }
+  }
+
+  // Edit event functions
+  function openEditModal(event: NDKEvent) {
+    editingEvent = event;
+    const details = extractEventDetails(event.tags);
+    
+    // Convert timestamps to date and time strings
+    const startDate = new Date(details.start);
+    const endDate = new Date(details.end);
+
+    editForm = {
+      title: details.title || '',
+      content: event.content || '',
+      summary: details.summary || '',
+      location: details.location || '',
+      startDate: startDate.toISOString().split('T')[0],
+      startTime: startDate.toTimeString().slice(0, 5),
+      endDate: endDate.toISOString().split('T')[0],
+      endTime: endDate.toTimeString().slice(0, 5),
+      image: event.tags.find(tag => tag[0] === 'image')?.[1] || ''
+    };
+
+    showEditModal = true;
+  }
+
+  async function handleEditSubmit() {
+    if (!ndk || !editingEvent) return;
+
+    try {
+      // Create new event with updated content
+      const ndkEvent = new NDKEvent(ndk);
+      ndkEvent.kind = 31923;
+      ndkEvent.content = editForm.content;
+      
+      // Convert dates to Unix timestamps
+      const startDateTime = new Date(`${editForm.startDate}T${editForm.startTime}`);
+      const endDateTime = new Date(`${editForm.endDate}T${editForm.endTime}`);
+      const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
+      const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
+      
+      ndkEvent.tags = [
+        ['e', editingEvent.id, '', 'reply'],
+        ['title', editForm.title],
+        ['summary', editForm.summary],
+        ['start', startTimestamp.toString()],
+        ['end', endTimestamp.toString()],
+        ['location', editForm.location]
+      ];
+
+      if (editForm.image) {
+        ndkEvent.tags.push(['image', editForm.image]);
+      }
+
+      // Publish the updated event
+      await ndk.publish(ndkEvent);
+
+      // Create deletion request for the old event (NIP-09)
+      const deletionEvent = new NDKEvent(ndk);
+      deletionEvent.kind = 5;
+      deletionEvent.tags = [
+        ['e', editingEvent.id],
+        ['k', '31923']
+      ];
+      deletionEvent.content = 'Event updated';
+      await ndk.publish(deletionEvent);
+
+      // Update local state
+      eventsKind1 = eventsKind1.map(e => 
+        e.id === editingEvent.id ? ndkEvent : e
+      );
+
+      showEditModal = false;
+      editingEvent = null;
+      alert('Event updated successfully');
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('Failed to update event: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  function closeEditModal() {
+    showEditModal = false;
+    editingEvent = null;
+  }
+
+  // Function to extract event details
+  function extractEventDetails(tags: string[][]): EventDetails {
+    try {
+      const eventDetails: EventDetails = {
+        start: new Date(),  // Default to current date if not found
+        end: new Date()     // Default to current date if not found
+      };
+      
+      if (!Array.isArray(tags)) {
+        console.error('Invalid tags format:', tags);
+        return eventDetails;
+      }
+
+      tags.forEach(([key, value]) => {
+        try {
+          switch (key) {
+            case 'title':
+              eventDetails.title = value;
+              break;
+            case 'name':
+              eventDetails.name = value;
+              break;
+            case 'description':
+              eventDetails.description = value;
+              break;
+            case 'summary':
+              eventDetails.summary = value;
+              break;
+            case 'start':
+              const startTimestamp = parseInt(value);
+              if (!isNaN(startTimestamp)) {
+                eventDetails.start = new Date(startTimestamp * 1000);
+              }
+              break;
+            case 'end':
+              const endTimestamp = parseInt(value);
+              if (!isNaN(endTimestamp)) {
+                eventDetails.end = new Date(endTimestamp * 1000);
+              }
+              break;
+            case 'location':
+              eventDetails.location = value;
+              break;
+            case 'address':
+              eventDetails.address = value;
+              break;
+          }
+        } catch (tagError) {
+          console.error('Error processing tag:', key, value, tagError);
+        }
+      });
+      return eventDetails;
+    } catch (error) {
+      console.error('Error extracting event details:', error);
+      return {
+        title: 'Error loading event',
+        start: new Date(),
+        end: new Date()
+      };
+    }
   }
 
 </script>
@@ -312,9 +510,13 @@ function extractImageUrls(tags) {
 
             <!-- Action Buttons -->
             <div class="event-actions">
-              <button class="action-button edit">
+              <button class="action-button edit" on:click={() => openEditModal(event)}>
                 <Icon icon="mdi:pencil" />
                 Edit Event
+              </button>
+              <button class="action-button delete" on:click={() => deleteEvent(event)}>
+                <Icon icon="mdi:delete" />
+                Delete
               </button>
               <button class="action-button share">
                 <Icon icon="mdi:share-variant" />
@@ -328,18 +530,84 @@ function extractImageUrls(tags) {
   </div>
 </div>
 
-{#if showModal}
-  <div 
+{#if showEditModal}
+  <dialog 
+    class="modal edit-modal" 
+    open
+    on:close={closeEditModal}
+    aria-labelledby="edit-modal-title"
+  >
+    <div 
+      class="modal-content edit-form" 
+      role="document"
+    >
+      <h2 id="edit-modal-title">Edit Event</h2>
+      <form on:submit|preventDefault={handleEditSubmit}>
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input type="text" id="title" bind:value={editForm.title} required />
+        </div>
+
+        <div class="form-group">
+          <label for="content">Description</label>
+          <textarea id="content" bind:value={editForm.content} rows="4"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="summary">Summary</label>
+          <input type="text" id="summary" bind:value={editForm.summary} />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <input type="date" id="startDate" bind:value={editForm.startDate} required />
+          </div>
+          <div class="form-group">
+            <label for="startTime">Start Time</label>
+            <input type="time" id="startTime" bind:value={editForm.startTime} required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="endDate">End Date</label>
+            <input type="date" id="endDate" bind:value={editForm.endDate} required />
+          </div>
+          <div class="form-group">
+            <label for="endTime">End Time</label>
+            <input type="time" id="endTime" bind:value={editForm.endTime} required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="location">Location</label>
+          <input type="text" id="location" bind:value={editForm.location} />
+        </div>
+
+        <div class="form-group">
+          <label for="image">Image URL</label>
+          <input type="url" id="image" bind:value={editForm.image} />
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="save-button">Save Changes</button>
+          <button type="button" class="cancel-button" on:click={closeEditModal}>Cancel</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+{/if}
+
+{#if showZapModal}
+  <dialog 
     class="modal" 
-    on:click={closeModal}
-    on:keydown={e => e.key === 'Escape' && closeModal()}
-    role="dialog"
-    aria-modal="true"
+    open
+    on:close={closeModal}
     aria-labelledby="modal-title"
   >
     <div 
       class="modal-content" 
-      on:click|stopPropagation
       role="document"
     >
       <h2 id="modal-title">Zap User</h2>
@@ -349,7 +617,7 @@ function extractImageUrls(tags) {
       <button on:click={handleZap}>Send Zap</button>
       <button on:click={closeModal}>Close</button>
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <style>
@@ -634,6 +902,16 @@ a {
   background: #E5E7EB;
 }
 
+.action-button.delete {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.action-button.delete:hover {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
 /* Modal */
 .modal {
   position: fixed;
@@ -677,6 +955,95 @@ a {
 
 .modal-content button:hover {
   background-color: #f5c141;
+}
+
+/* Edit Modal Styles */
+.edit-modal .modal-content {
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.edit-form h2 {
+  margin-bottom: 1.5rem;
+  color: #1a1a1a;
+  font-size: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #4B5563;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #4F46E5;
+  outline: none;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+.save-button {
+  background: #4F46E5 !important;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-button:hover {
+  background: #4338CA !important;
+}
+
+.cancel-button {
+  background: #F3F4F6 !important;
+  color: #374151;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+  background: #E5E7EB !important;
 }
 
 /* Responsive Design - Adjustments for small screens */

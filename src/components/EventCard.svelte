@@ -1,14 +1,16 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation';
   import RSVP from './RSVP.svelte';
   import { ndkStore } from '$lib/stores/ndkStore';
   import Icon from '@iconify/svelte';
-  export let event;
-  export let profile;
+  import type { NDKEvent } from '@nostr-dev-kit/ndk';
+  import type NDK from '@nostr-dev-kit/ndk';
+  export let event: NDKEvent;
+  export let profile: { name?: string } | undefined;
   export let minimal = false;
   
   // Get NDK instance from store
-  let ndkInstance;
+  let ndkInstance: NDK;
   ndkStore.subscribe(value => {
     ndkInstance = value;
   });
@@ -83,8 +85,22 @@
     </div>
     <div class="event-content">
       <h3 class="event-title">{extractEventDetails(event.tags).title || 'Event Title'}</h3>
-      <div class="event-meta">
-        <p class="date">{new Date(extractEventDetails(event.tags).start).toLocaleDateString()}</p>
+      <div class="event-details-minimal">
+        <div class="detail-row">
+          <Icon icon="mdi:calendar" />
+          <p class="value">
+            <span class="time">
+              <Icon icon="mdi:clock-time-four-outline" />
+              {new Date(extractEventDetails(event.tags).start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          </p>
+        </div>
+        {#if extractEventDetails(event.tags).location}
+        <div class="detail-row location">
+          <Icon icon="mdi:map-marker" />
+          <p class="value">{extractEventDetails(event.tags).location}</p>
+        </div>
+        {/if}
         <button class="organizer-link" on:click|stopPropagation={navigateToOrganizer}>
           <Icon icon="mdi:account" />
           {profile?.name || 'Unknown'}
